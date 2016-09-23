@@ -475,7 +475,7 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			strcat(format_str, CHEMO_SCAN_CFG_FORMAT);
 			strcat(format_str, ")");
 			tn = tpl_map(format_str, struct_p, NANO_SER_NUM_LEN,
-					SCAN_CFG_FILENAME_LEN, MAX_CHEMO_PATTERNS_PER_SCAN);
+					SCAN_CFG_FILENAME_LEN, MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN);
 			break;
 
 		case CHEMO_DATA_TYPE:
@@ -485,7 +485,8 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			tn = tpl_map(format_str, struct_p,
 					SCAN_NAME_LEN, NUM_SHIFT_VECTOR_COEFFS, NUM_PIXEL_NM_COEFFS,
 					NANO_SER_NUM_LEN, NANO_SER_NUM_LEN, SCAN_CFG_FILENAME_LEN,
-					ADC_DATA_LEN);
+					MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN,
+					MAX_CHEMO_PATTERNS_PER_SCAN, ADC_DATA_LEN);
 			break;
 
 		default: /* Unrecognized type, should not be possible with BLOB_TYPES type */
@@ -498,14 +499,14 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 
 SCAN_TYPES dlpspec_scan_data_get_type(const uScanData *pData)
 {
-    if(pData->slew_data.slewCfg.head.scan_type == SLEW_TYPE)
+	if(pData->chemo_data.chemoCfg.scan_type == CHEMO_TYPE)
+		return CHEMO_TYPE;
+	else if(pData->slew_data.slewCfg.head.scan_type == SLEW_TYPE)
         return SLEW_TYPE;
     else if(pData->data.scan_type == COLUMN_TYPE)
         return COLUMN_TYPE;
     else if(pData->data.scan_type == HADAMARD_TYPE)
         return HADAMARD_TYPE;
-    else if(pData->chemo_data.chemoCfg.scan_type == CHEMO_TYPE)
-    	return CHEMO_TYPE;
     else
         return ERR_DLPSPEC_ILLEGAL_SCAN_TYPE;
 }
@@ -567,15 +568,25 @@ bool dlpspec_is_slewcfgtype(void *struct_p, size_t buffer_size)
 bool dlpspec_is_chemocfgtype(void *struct_p, size_t buffer_size)
 {
 	char *fmt;
-	char scan_type;
+	unsigned char scan_type;
 
 	fmt = tpl_peek(TPL_MEM | TPL_DATAPEEK, struct_p, buffer_size, "c", &scan_type);
 	free (fmt);
 
-		if(scan_type == CHEMO_TYPE)
-			return true;
-		else
-			return false;
+	if(scan_type == CHEMO_TYPE)
+		return true;
+	else
+		return false;
+}
+
+char dlpspec_get_chemocfgtype(void *struct_p, size_t buffer_size)
+{
+	char *fmt;
+	char scan_type;
+
+	fmt = tpl_peek(TPL_MEM | TPL_DATAPEEK, struct_p, buffer_size, "c", &scan_type);
+	free (fmt);
+	return scan_type;
 }
 
 

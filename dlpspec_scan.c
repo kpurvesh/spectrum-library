@@ -168,7 +168,7 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_bendPatterns(const FrameBufferDescriptor *pF
     int lineWidthInBytes;
     int frameBufferSz;
     int offset;
-    int8_t* pBufferArr = NULL;
+    uint8_t* pBufferArr;
     
     DLPSPEC_ERR_CODE ret_val = (DLPSPEC_PASS);
 
@@ -204,15 +204,15 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_bendPatterns(const FrameBufferDescriptor *pF
         goto cleanup_and_exit;
     }
 
-    pBufferArr = (int8_t*)(malloc(frameBufferSz));
+    pBufferArr = (uint8_t*)(malloc(frameBufferSz));
 
     for(buffer = 0; buffer < numBuffers; buffer++)
     {
-    	memcpy(pBufferArr,pBuffer,frameBufferSz);
+//    	memcpy(pBufferArr,pBuffer,frameBufferSz);
 
         for(line=0 ; line< pFB->height; line++ )
         {
-        	memcpy(pOrigLine+offset, pBufferArr + (line * lineWidthInBytes), lineWidthInBytes);
+        	memcpy(pOrigLine+offset, pBuffer + (line * lineWidthInBytes), lineWidthInBytes);
             pLine = pBuffer + (line * lineWidthInBytes);
             memcpy(pLine, pOrigLine+offset-(shiftVector[line] * (pFB->bpp/8)),lineWidthInBytes);
         }/*end of line loop*/
@@ -225,6 +225,8 @@ cleanup_and_exit:
         free(shiftVector);
     if(pOrigLine != NULL)
         free(pOrigLine);
+    if(pBufferArr != NULL)
+    	free(pBufferArr);
 
     return ret_val;
 }

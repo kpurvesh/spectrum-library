@@ -44,6 +44,7 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_interpret(const uScanData *puScanData, scanR
 	for(i = 0; i < pScanData->chemoCfg.num_patterns; i++) {
 		cfg.widths_px[i] = pScanData->chemoCfg.widths_px[i];
 		cfg.heights_px[i] = pScanData->chemoCfg.heights_px[i];
+		cfg.wavelengths[i] = pScanData->chemoCfg.wavelengths[i];
 	}
 	/* Compute wavelength centers for the scanData configuration, using genPatDef */
 	ret_val = dlpspec_scan_chemo_genPatDef(&cfg, &(pScanData->calibration_coeffs),
