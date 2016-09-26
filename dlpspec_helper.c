@@ -438,6 +438,22 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			tn = tpl_map(format_str, struct_p, SLEW_SCAN_MAX_SECTIONS);
 			break;
 
+		case CHEMO_CFG_HEAD_TYPE:
+			strcpy(format_str, "S(");
+			strcat(format_str, CHEMO_SCAN_CFG_HEAD_FORMAT);
+			strcat(format_str, ")");
+			tn = tpl_map(format_str, struct_p, NANO_SER_NUM_LEN,
+					SCAN_CFG_FILENAME_LEN);
+			break;
+
+		case CHEMO_CFG_SECT_TYPE:
+			strcpy(format_str, "S(");
+			strcat(format_str, CHEMO_SCAN_CFG_SECT_FORMAT);
+			strcat(format_str, ")#");
+			tn = tpl_map(format_str, struct_p, CHEMO_SCAN_MAX_SECTIONS,MAX_CHEMO_PATTERNS_PER_SCAN,
+						 MAX_CHEMO_PATTERNS_PER_SCAN);
+			break;
+
 		case CALIB_TYPE:
 			strcpy(format_str, "S(");
 			strcat(format_str, CALIB_COEFFS_FORMAT);
@@ -470,23 +486,18 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			tn = tpl_map(format_str, struct_p, ADC_DATA_LEN);
 			break;
 
-		case CHEMO_CFG_TYPE:
-			strcpy(format_str, "S(");
-			strcat(format_str, CHEMO_SCAN_CFG_FORMAT);
-			strcat(format_str, ")");
-			tn = tpl_map(format_str, struct_p, NANO_SER_NUM_LEN,
-					SCAN_CFG_FILENAME_LEN, MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN);
-			break;
+		case CHEMO_DATA_HEAD_TYPE:
+					strcpy(format_str, "S(");
+					strcat(format_str, CHEMO_SCAN_DATA_HEAD_FORMAT);
+					strcat(format_str, ")");
+					tn = tpl_map(format_str, struct_p,
+							SCAN_NAME_LEN, NUM_SHIFT_VECTOR_COEFFS, NUM_PIXEL_NM_COEFFS,
+		                    NANO_SER_NUM_LEN);
+					break;
 
-		case CHEMO_DATA_TYPE:
-			strcpy(format_str, "S(");
-			strcat(format_str, CHEMO_SCAN_DATA_FORMAT);
-			strcat(format_str, ")");
-			tn = tpl_map(format_str, struct_p,
-					SCAN_NAME_LEN, NUM_SHIFT_VECTOR_COEFFS, NUM_PIXEL_NM_COEFFS,
-					NANO_SER_NUM_LEN, NANO_SER_NUM_LEN, SCAN_CFG_FILENAME_LEN,
-					MAX_CHEMO_PATTERNS_PER_SCAN, MAX_CHEMO_PATTERNS_PER_SCAN,
-					MAX_CHEMO_PATTERNS_PER_SCAN, ADC_DATA_LEN);
+		case CHEMO_DATA_ADC_TYPE:
+			strcpy(format_str, ADC_DATA_FORMAT);
+			tn = tpl_map(format_str, struct_p, ADC_DATA_LEN);
 			break;
 
 		default: /* Unrecognized type, should not be possible with BLOB_TYPES type */
@@ -499,7 +510,7 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 
 SCAN_TYPES dlpspec_scan_data_get_type(const uScanData *pData)
 {
-	if(pData->chemo_data.chemoCfg.scan_type == CHEMO_TYPE)
+	if(pData->chemo_data.chemoCfg.head.scan_type == CHEMO_TYPE)
 		return CHEMO_TYPE;
 	else if(pData->slew_data.slewCfg.head.scan_type == SLEW_TYPE)
         return SLEW_TYPE;
@@ -535,7 +546,7 @@ bool dlpspec_is_chemodatatype(void *struct_p, size_t buffer_size)
 {
 	char *fmt;
 	bool ret;
-    char std_cfg_format[] = "S(" CHEMO_SCAN_DATA_FORMAT ")";
+    char std_cfg_format[] = "S(" SCAN_DATA_FORMAT ")";
 
 	fmt = tpl_peek(TPL_MEM, struct_p, buffer_size);
 
@@ -578,17 +589,6 @@ bool dlpspec_is_chemocfgtype(void *struct_p, size_t buffer_size)
 	else
 		return false;
 }
-
-char dlpspec_get_chemocfgtype(void *struct_p, size_t buffer_size)
-{
-	char *fmt;
-	char scan_type;
-
-	fmt = tpl_peek(TPL_MEM | TPL_DATAPEEK, struct_p, buffer_size, "c", &scan_type);
-	free (fmt);
-	return scan_type;
-}
-
 
 DLPSPEC_ERR_CODE dlpspec_get_scanData_from_slewScanData(const slewScanData *pSlew,
                                                 scanData *pData, int section_index)

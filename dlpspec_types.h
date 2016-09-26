@@ -39,8 +39,10 @@ typedef enum
 	SLEW_DATA_HEAD_TYPE  = 6,
 	SLEW_CFG_SECT_TYPE	 = 5,
 	SLEW_DATA_ADC_TYPE   = 7,
-	CHEMO_CFG_TYPE		 = 128,
-	CHEMO_DATA_TYPE = 129,
+	CHEMO_CFG_HEAD_TYPE	 = 128,
+	CHEMO_CFG_SECT_TYPE	 = 129,
+	CHEMO_DATA_HEAD_TYPE = 130,
+	CHEMO_DATA_ADC_TYPE  = 131,
 // User extended blob types: 128-255 reserved for customer expansion
 }BLOB_TYPES;
 

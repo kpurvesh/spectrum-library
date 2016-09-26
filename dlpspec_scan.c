@@ -127,9 +127,9 @@ int32_t dlpspec_scan_genPatterns(const uScanConfig* pCfg,
 						pCoeffs, pFB);
             break;
         case CHEMO_TYPE:
-        	ret_val = dlpspec_scan_chemo_genPatDef(&pCfg->chemoScanCfg,pCoeffs,&patDefCh);
-        	if (ret_val == DLPSPEC_PASS)
-        		numPatterns = dlpspec_scan_chemo_genPatterns(&patDefCh,pFB,0);
+        	numPatterns = dlpspec_scan_chemo_genPatDef(&pCfg->chemoScanCfg,pCoeffs,&patDefCh,pFB);
+        	if (numPatterns < 0)
+        		ret_val = numPatterns;
         	break;
 		default:
 			return ERR_DLPSPEC_INVALID_INPUT;
@@ -331,9 +331,17 @@ DLPSPEC_ERR_CODE dlpspec_get_scan_config_dump_size(const uScanConfig *pCfg,
     if (pCfg == NULL)
 		return (ERR_DLPSPEC_NULL_POINTER);
 
-    if(pCfg->chemoScanCfg.scan_type == CHEMO_TYPE)
+    if(pCfg->chemoScanCfg.head.scan_type == CHEMO_TYPE)
     {
-    	ret_val = dlpspec_get_serialize_dump_size(pCfg, pBufSize, CHEMO_CFG_TYPE);
+    	ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CHEMO_CFG_HEAD_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		*pBufSize = size;
+		ret_val = dlpspec_get_serialize_dump_size(&pCfg->chemoScanCfg.chemoSection[0],
+						&size, CHEMO_CFG_SECT_TYPE);
+
+		*pBufSize += size;
     } else if(pCfg->scanCfg.scan_type != SLEW_TYPE)
 	{
 		ret_val = dlpspec_get_serialize_dump_size(pCfg, pBufSize, CFG_TYPE);
@@ -378,17 +386,29 @@ DLPSPEC_ERR_CODE dlpspec_scan_write_configuration(const uScanConfig *pCfg,
     if ((pCfg == NULL) || (pBuf == NULL))
 		return (ERR_DLPSPEC_NULL_POINTER);
 
-    if(pCfg->chemoScanCfg.scan_type == CHEMO_TYPE)
+    if(pCfg->chemoScanCfg.head.scan_type == CHEMO_TYPE)
     {
-    	ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CHEMO_CFG_TYPE);
-    	if(ret_val != DLPSPEC_PASS)
-    		return ret_val;
-    	if(bufSize < size) //if allocated size less than required size
+    	ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CHEMO_CFG_HEAD_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+		ret_val = dlpspec_get_serialize_dump_size(&pCfg->chemoScanCfg.chemoSection[0],
+						&size1, CHEMO_CFG_SECT_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		if(bufSize < size+size1) //if allocated size less than required size
 		{
 			return ERR_DLPSPEC_INSUFFICIENT_MEM;
 		}
-    	ret_val = dlpspec_serialize(pCfg, pBuf, bufSize, CHEMO_CFG_TYPE);
-//    	ret_val = DLPSPEC_PASS;
+
+		pHeadBuf = pBuf;
+		ret_val = dlpspec_serialize(pCfg, pHeadBuf, size, CHEMO_CFG_HEAD_TYPE);
+
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+		pSectBuf = (void *)((int)pHeadBuf + size);
+		ret_val = dlpspec_serialize(&pCfg->chemoScanCfg.chemoSection[0], pSectBuf,
+    					size1, CHEMO_CFG_SECT_TYPE);
     } else if(pCfg->scanCfg.scan_type != SLEW_TYPE)
 	{
 		ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CFG_TYPE);
@@ -452,14 +472,30 @@ DLPSPEC_ERR_CODE dlpspec_scan_read_configuration(void *pBuf, const size_t bufSiz
 
     if(dlpspec_is_chemocfgtype(pBuf,bufSize) == true)
     {
-    	ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CHEMO_CFG_TYPE);
+		ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CHEMO_CFG_HEAD_TYPE);
 		if(ret_val != DLPSPEC_PASS)
 			return ret_val;
-		if(bufSize < size) //if allocated size less than required size
+        ret_val = dlpspec_get_serialize_dump_size(&pCfg->chemoScanCfg.chemoSection[0],
+			   			&size1, CHEMO_CFG_SECT_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		if(bufSize < size+size1) //if allocated size less than required size
 		{
 			return ERR_DLPSPEC_INSUFFICIENT_MEM;
 		}
-		ret_val = dlpspec_deserialize(pBuf, bufSize, CHEMO_CFG_TYPE);
+
+		pHeadBuf = pBuf;
+		ret_val = dlpspec_deserialize(pHeadBuf, size, CHEMO_CFG_HEAD_TYPE);
+
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		pSectBuf = (void *)((int)pHeadBuf + size);
+		ret_val = dlpspec_deserialize(pSectBuf, size1, CHEMO_CFG_SECT_TYPE);
+
+		memcpy(&pCfg->chemoScanCfg.chemoSection[0], pSectBuf,
+				sizeof(chemoScanSection)*CHEMO_SCAN_MAX_SECTIONS);
     } else if(dlpspec_is_slewcfgtype(pBuf, bufSize) == false)
 	{
 		ret_val = dlpspec_get_serialize_dump_size(pCfg, &size, CFG_TYPE);
@@ -530,6 +566,34 @@ static DLPSPEC_ERR_CODE dlpspec_get_scan_data_dump_sizes(
 
 }
 
+static DLPSPEC_ERR_CODE dlpspec_get_chemo_scan_data_dump_sizes(
+		const chemoScanData *pData, size_t *pSizeDataHead, size_t *pSizeCfgHead,
+	   	size_t *pSizeSect, size_t *pSizeADCData)
+{
+	DLPSPEC_ERR_CODE ret_val = (DLPSPEC_PASS);
+
+	if (pData == NULL)
+		return (ERR_DLPSPEC_NULL_POINTER);
+
+	ret_val = dlpspec_get_serialize_dump_size(pData, pSizeDataHead,
+			CHEMO_DATA_HEAD_TYPE);
+	if(ret_val != DLPSPEC_PASS)
+		return ret_val;
+	ret_val = dlpspec_get_serialize_dump_size(&pData->chemoCfg,
+			pSizeCfgHead, CHEMO_CFG_HEAD_TYPE);
+	if(ret_val != DLPSPEC_PASS)
+		return ret_val;
+	ret_val = dlpspec_get_serialize_dump_size(&pData->chemoCfg.chemoSection[0],
+			pSizeSect, CHEMO_CFG_SECT_TYPE);
+	if(ret_val != DLPSPEC_PASS)
+		return ret_val;
+	ret_val = dlpspec_get_serialize_dump_size(&pData->adc_data[0],
+			pSizeADCData, CHEMO_DATA_ADC_TYPE);
+
+	return ret_val;
+
+}
+
 DLPSPEC_ERR_CODE dlpspec_get_scan_data_dump_size(const uScanData *pData, 
 		size_t *pBufSize)
 /**
@@ -553,9 +617,11 @@ DLPSPEC_ERR_CODE dlpspec_get_scan_data_dump_size(const uScanData *pData,
     if (pData == NULL)
 		return (ERR_DLPSPEC_NULL_POINTER);
 
-    if(pData->chemo_data.chemoCfg.scan_type == CHEMO_TYPE)
+    if(pData->chemo_data.chemoCfg.head.scan_type == CHEMO_TYPE)
     {
-    	ret_val = dlpspec_get_serialize_dump_size(pData,pBufSize,CHEMO_DATA_TYPE);
+    	ret_val =  dlpspec_get_chemo_scan_data_dump_sizes(&pData->chemo_data,
+    					&size_data_head, &size_cfg_head, &size_sect, &size_adc_data);
+    	*pBufSize = size_data_head+size_cfg_head+size_sect+size_adc_data;
     } else if(pData->data.scan_type != SLEW_TYPE)
 	{
 		ret_val = dlpspec_get_serialize_dump_size(pData, pBufSize, SCAN_DATA_TYPE);
@@ -604,14 +670,35 @@ DLPSPEC_ERR_CODE dlpspec_scan_write_data(const uScanData *pData, void *pBuf,
 
     if(type == CHEMO_TYPE)
     {
-    	ret_val = dlpspec_get_serialize_dump_size(pData, &size, CHEMO_DATA_TYPE);
+    	ret_val =  dlpspec_get_chemo_scan_data_dump_sizes(&pData->chemo_data,
+    					&size_data_head, &size_cfg_head, &size_sect, &size_adc_data);
 		if(ret_val != DLPSPEC_PASS)
 			return ret_val;
-		if(bufSize < size) //if allocated size less than required size
+
+		if(bufSize < size_data_head+size_cfg_head+size_sect+size_adc_data)
+		//if allocated size less than required size
 		{
 			return ERR_DLPSPEC_INSUFFICIENT_MEM;
 		}
-		ret_val = dlpspec_serialize(pData, pBuf, bufSize, CHEMO_DATA_TYPE);
+
+		ret_val = dlpspec_serialize(pData, pBuf, size_data_head,
+				CHEMO_DATA_HEAD_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+		pHeadBuf = (void *)((int)pBuf + size_data_head);
+		ret_val = dlpspec_serialize(&pData->chemo_data.chemoCfg, pHeadBuf,
+				size_cfg_head, CHEMO_CFG_HEAD_TYPE);
+
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+		pSectBuf = (void *)((int)pHeadBuf + size_cfg_head);
+		ret_val = dlpspec_serialize(&pData->chemo_data.chemoCfg.chemoSection[0],
+				pSectBuf, size_sect, CHEMO_CFG_SECT_TYPE);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+		pADCdataBuf = (void *)((int)pSectBuf + size_sect);
+		ret_val = dlpspec_serialize(&pData->chemo_data.adc_data[0], pADCdataBuf,
+    					size_adc_data, CHEMO_DATA_ADC_TYPE);
     } else if(type != SLEW_TYPE)
 	{
 		ret_val = dlpspec_get_serialize_dump_size(pData, &size, SCAN_DATA_TYPE);
@@ -687,7 +774,37 @@ DLPSPEC_ERR_CODE dlpspec_scan_read_data(void *pBuf, const size_t bufSize)
 
     if(dlpspec_is_chemodatatype(pBuf, bufSize) == true)
     {
-    	ret_val = dlpspec_deserialize(pBuf, bufSize, CHEMO_DATA_TYPE);
+    	ret_val =  dlpspec_get_chemo_scan_data_dump_sizes(&pData->chemo_data,
+    					&size_data_head, &size_cfg_head, &size_sect, &size_adc_data);
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		if(bufSize < size_data_head+size_cfg_head+size_sect+size_adc_data)
+		//if allocated size less than required size
+		{
+			return ERR_DLPSPEC_INSUFFICIENT_MEM;
+		}
+
+		ret_val = dlpspec_deserialize(pBuf, size_data_head,	CHEMO_DATA_HEAD_TYPE);
+
+		pHeadBuf = (void *)((int)pBuf + size_data_head);
+		ret_val = dlpspec_deserialize(pHeadBuf, size_cfg_head, CHEMO_CFG_HEAD_TYPE);
+
+		if(ret_val != DLPSPEC_PASS)
+			return ret_val;
+
+		memcpy(&pData->chemo_data.chemoCfg.head, pHeadBuf, sizeof(struct chemoScanConfigHead));
+
+		pSectBuf = (void *)((int)pHeadBuf + size_cfg_head);
+		ret_val = dlpspec_deserialize(pSectBuf, size_sect, CHEMO_CFG_SECT_TYPE);
+
+		memcpy(&pData->chemo_data.chemoCfg.chemoSection[0], pSectBuf,
+				sizeof(chemoScanSection)*CHEMO_SCAN_MAX_SECTIONS);
+
+		pADCdataBuf = (void *)((int)pSectBuf + size_sect);
+		ret_val = dlpspec_deserialize(pADCdataBuf, size_adc_data,
+				CHEMO_DATA_ADC_TYPE);
+		memcpy(pData->chemo_data.adc_data, pADCdataBuf, sizeof(uint32_t)*ADC_DATA_LEN);
     } else if(dlpspec_is_slewdatatype(pBuf, bufSize) == false)
 	{
 		ret_val = dlpspec_deserialize(pBuf, bufSize, SCAN_DATA_TYPE);

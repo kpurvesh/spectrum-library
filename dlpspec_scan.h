@@ -32,6 +32,10 @@
 /** Maximum number of sections allowed in a slew scan definition/config */
 #define SLEW_SCAN_MAX_SECTIONS 5
 
+#define MAX_CHEMO_PATTERNS_PER_SCAN	50
+
+#define CHEMO_SCAN_MAX_SECTIONS 1
+
 /** Supported scan types */
 typedef enum
 {
@@ -80,19 +84,29 @@ typedef struct
     SCAN_CONFIG_STUB
 }scanConfig;
 
-#define MAX_CHEMO_PATTERNS_PER_SCAN	5
+typedef struct
+{
+	uint16_t num_patterns; /**< Number of desired points in the spectrum. */ \
+	uint8_t  width_px; /**< Pixel width of the patterns. Increasing this
+							 will increase SNR, but reduce resolution. */ \
+	uint16_t wavelengths[MAX_CHEMO_PATTERNS_PER_SCAN]; \
+	uint16_t heights_px[MAX_CHEMO_PATTERNS_PER_SCAN]; \
+}chemoScanSection;
+#define CHEMO_SCAN_CFG_SECT_FORMAT "vcv#v#"
+
+struct chemoScanConfigHead
+{
+    SCAN_CONFIG_HEAD
+    uint16_t    num_repeats; /**< Number of times to repeat the scan on the spectromter before averaging the scans together and returning the results. This can be used to increase integration time. */
+	uint8_t		num_sections; /**< Number of sections that make up this scan defintion */
+};
+#define CHEMO_SCAN_CFG_HEAD_FORMAT SCAN_CONFIG_HEAD_FORMAT "vc"
 
 typedef struct
 {
-	SCAN_CONFIG_HEAD
-	uint16_t wavelengths[MAX_CHEMO_PATTERNS_PER_SCAN];
-	uint8_t widths_px[MAX_CHEMO_PATTERNS_PER_SCAN];
-	uint16_t heights_px[MAX_CHEMO_PATTERNS_PER_SCAN];
-	uint16_t num_patterns;
-	uint16_t num_repeats;
+	struct chemoScanConfigHead head;
+	chemoScanSection chemoSection[CHEMO_SCAN_MAX_SECTIONS];
 }chemoScanConfig;
-
-#define CHEMO_SCAN_CFG_FORMAT SCAN_CONFIG_HEAD_FORMAT "v#c#v#vv"
 
 typedef enum
 {
@@ -233,7 +247,7 @@ typedef struct
  */
 #define SCAN_DATA_FORMAT SCAN_DATA_VERSION_FORMAT SCAN_DATA_HEAD_FORMAT SCAN_CFG_FORMAT ADC_DATA_FORMAT
 
-#define CHEMO_SCAN_DATA_FORMAT SCAN_DATA_VERSION_FORMAT SCAN_DATA_HEAD_FORMAT CHEMO_SCAN_CFG_FORMAT ADC_DATA_FORMAT
+#define CHEMO_SCAN_DATA_HEAD_FORMAT SCAN_DATA_VERSION_FORMAT SCAN_DATA_HEAD_FORMAT
 
 typedef struct
 {
