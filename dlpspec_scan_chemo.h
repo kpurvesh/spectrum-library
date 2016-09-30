@@ -16,7 +16,7 @@ typedef struct
 {
 	uint16_t numPatterns; /**< Number of binary DMD patterns required for the scan */
 	uint16_t colHeight[MAX_CHEMO_PATTERNS_PER_SCAN]; /** Height in pixels of each group of on-state pixels in each pattern */
-	uint16_t colWidth[MAX_CHEMO_PATTERNS_PER_SCAN]; /**< Width in pixels of each group of on-state pixels in each pattern */
+	uint16_t colWidth; /**< Width in pixels of each group of on-state pixels in each pattern */
 	uint16_t colMidPix[MAX_CHEMO_PATTERNS_PER_SCAN]; /**< The DMD column number corresponding to the center of the on-state group of pixels for each pattern */
 } patDefChemo;
 

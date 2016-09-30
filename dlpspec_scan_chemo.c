@@ -41,11 +41,13 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_interpret(const uScanData *puScanData, scanR
 	cfg.scanConfigIndex = pScanData->chemoCfg.scanConfigIndex;
 	cfg.num_patterns = pScanData->chemoCfg.num_patterns;
 	cfg.num_repeats = pScanData->chemoCfg.num_repeats;
-	for(i = 0; i < pScanData->chemoCfg.num_patterns; i++) {
-		cfg.widths_px[i] = pScanData->chemoCfg.widths_px[i];
-		cfg.heights_px[i] = pScanData->chemoCfg.heights_px[i];
-		cfg.wavelengths[i] = pScanData->chemoCfg.wavelengths[i];
-	}
+	cfg.width_px = pScanData->chemoCfg.width_px;
+	cfg.seqId = pScanData->chemoCfg.seqId;
+//	for(i = 0; i < pScanData->chemoCfg.num_patterns; i++) {
+//
+//		cfg.heights_px[i] = pScanData->chemoCfg.heights_px[i];
+//		cfg.wavelengths[i] = pScanData->chemoCfg.wavelengths[i];
+//	}
 	/* Compute wavelength centers for the scanData configuration, using genPatDef */
 	ret_val = dlpspec_scan_chemo_genPatDef(&cfg, &(pScanData->calibration_coeffs),
 			&patDef);
@@ -56,7 +58,7 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_interpret(const uScanData *puScanData, scanR
 
 	for(i=0; i < pResults->length; i++)
 	{
-		if (pScanData->chemoCfg.widths_px[i] % 2 != 0)
+		if (pScanData->chemoCfg.width_px % 2 != 0)
 			mid_px_f = patDef.colMidPix[i];
 		else
 			mid_px_f = patDef.colMidPix[i] - 0.5;
@@ -74,6 +76,73 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_interpret(const uScanData *puScanData, scanR
 	return ret_val;
 }
 
+chemoSelection dlpspec_get_wavelengths_heights(const chemoScanConfig *pCfg)
+{
+	int i;
+	chemoSelection results;
+	switch(pCfg->seqId)
+	{
+		case 0:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 480;
+				}
+			break;
+		case 1:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 240;
+				}
+			break;
+		case 2:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 120;
+				}
+			break;
+		case 3:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 60;
+				}
+			break;
+		case 4:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 30;
+				}
+			break;
+		case 5:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 15;
+				}
+			break;
+		case 6:
+			for(i = 0; i < pCfg->num_patterns; i++)
+				{
+					results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+					results.heights[i] = 1;
+				}
+			break;
+		default:
+			for(i = 0; i < pCfg->num_patterns; i++)
+			{
+				results.wavelengths[i] = 900 + ((double)i*800 / (double)(pCfg->num_patterns-1));
+				results.heights[i] = (480-pCfg->seqId);
+			}
+			break;
+	}
+
+	return results;
+}
+
 DLPSPEC_ERR_CODE dlpspec_scan_chemo_genPatDef(const chemoScanConfig *pScanConfig, const calibCoeffs *pCoeffs, patDefChemo *patDefCh)
 {
 	int i;
@@ -84,15 +153,16 @@ DLPSPEC_ERR_CODE dlpspec_scan_chemo_genPatDef(const chemoScanConfig *pScanConfig
 		return (ERR_DLPSPEC_NULL_POINTER);
 
 	patDefCh->numPatterns = pScanConfig->num_patterns;
+	patDefCh->colWidth = pScanConfig->width_px;
+	chemoSelection selection = dlpspec_get_wavelengths_heights(pScanConfig);
 	for(i = 0; i < pScanConfig->num_patterns; i++) {
-		ret_val = dlpspec_util_nmToColumn(pScanConfig->wavelengths[i],pCoeffs->PixelToWavelengthCoeffs, &mid_x);
+		ret_val = dlpspec_util_nmToColumn(selection.wavelengths[i],pCoeffs->PixelToWavelengthCoeffs, &mid_x);
 		if (ret_val < 0)
 		{
 			return (ERR_DLPSPEC_INVALID_INPUT);
 		}
 		patDefCh->colMidPix[i] = mid_x;
-		patDefCh->colWidth[i] = pScanConfig->widths_px[i];
-		patDefCh->colHeight[i] = pScanConfig->heights_px[i];
+		patDefCh->colHeight[i] = selection.heights[i];
 	}
 
 	return (DLPSPEC_PASS);
@@ -138,19 +208,19 @@ int32_t dlpspec_scan_chemo_genPatterns(const patDefChemo *patDefCh,
 		}
 
 		//Guard against rectangles drawn out of the left bound of the frame
-		if((patDefCh->colMidPix[i] - patDefCh->colWidth[i]/2) < 0)
+		if((patDefCh->colMidPix[i] - patDefCh->colWidth/2) < 0)
 			rect.startX = 0;
 		else
-			rect.startX = patDefCh->colMidPix[i] - patDefCh->colWidth[i]/2;
+			rect.startX = patDefCh->colMidPix[i] - patDefCh->colWidth/2;
 
 		rect.startY = 0;
 		rect.height = patDefCh->colHeight[i];
 
 		//Guard against rectangles drawn out of the right bound of the frame
-		if((rect.startX + patDefCh->colWidth[i]) > pFB->width)
+		if((rect.startX + patDefCh->colWidth) > pFB->width)
 			rect.width = pFB->width - rect.startX;
 		else
-			rect.width = patDefCh->colWidth[i];
+			rect.width = patDefCh->colWidth;
 
 		rect.pixelVal = 1 << (curPattern%patterns_per_image);
 

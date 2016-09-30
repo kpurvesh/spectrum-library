@@ -80,19 +80,24 @@ typedef struct
     SCAN_CONFIG_STUB
 }scanConfig;
 
-#define MAX_CHEMO_PATTERNS_PER_SCAN	5
+#define MAX_CHEMO_PATTERNS_PER_SCAN	228
 
 typedef struct
 {
 	SCAN_CONFIG_HEAD
-	uint16_t wavelengths[MAX_CHEMO_PATTERNS_PER_SCAN];
-	uint8_t widths_px[MAX_CHEMO_PATTERNS_PER_SCAN];
-	uint16_t heights_px[MAX_CHEMO_PATTERNS_PER_SCAN];
+	uint8_t width_px;
 	uint16_t num_patterns;
 	uint16_t num_repeats;
+	uint16_t seqId;
 }chemoScanConfig;
 
-#define CHEMO_SCAN_CFG_FORMAT SCAN_CONFIG_HEAD_FORMAT "v#c#v#vv"
+typedef struct
+{
+	uint16_t wavelengths[MAX_CHEMO_PATTERNS_PER_SCAN];
+	uint16_t heights[MAX_CHEMO_PATTERNS_PER_SCAN];
+}chemoSelection;
+
+#define CHEMO_SCAN_CFG_FORMAT SCAN_CONFIG_HEAD_FORMAT "cvvv"
 
 typedef enum
 {
