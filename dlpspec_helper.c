@@ -475,7 +475,7 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			strcat(format_str, CHEMO_SCAN_CFG_FORMAT);
 			strcat(format_str, ")");
 			tn = tpl_map(format_str, struct_p, NANO_SER_NUM_LEN,
-					SCAN_CFG_FILENAME_LEN);
+					SCAN_CFG_FILENAME_LEN, CHEMO_SCAN_MAX_SEQS);
 			break;
 
 		case CHEMO_DATA_TYPE:
@@ -484,7 +484,8 @@ static tpl_node *map_data_to_tplnode(const void *struct_p,
 			strcat(format_str, ")");
 			tn = tpl_map(format_str, struct_p,
 					SCAN_NAME_LEN, NUM_SHIFT_VECTOR_COEFFS, NUM_PIXEL_NM_COEFFS,
-					NANO_SER_NUM_LEN, NANO_SER_NUM_LEN, SCAN_CFG_FILENAME_LEN, ADC_DATA_LEN);
+					NANO_SER_NUM_LEN, NANO_SER_NUM_LEN, SCAN_CFG_FILENAME_LEN,
+					CHEMO_SCAN_MAX_SEQS, ADC_DATA_LEN);
 			break;
 
 		default: /* Unrecognized type, should not be possible with BLOB_TYPES type */

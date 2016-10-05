@@ -105,6 +105,7 @@ int32_t dlpspec_scan_genPatterns(const uScanConfig* pCfg,
 {
     int32_t numPatterns=0;
     patDefCol patDefC;
+    int i;
     
     DLPSPEC_ERR_CODE ret_val = (DLPSPEC_PASS);
 
@@ -127,9 +128,16 @@ int32_t dlpspec_scan_genPatterns(const uScanConfig* pCfg,
 						pCoeffs, pFB);
             break;
         case CHEMO_TYPE:
-        	ret_val = dlpspec_scan_chemo_genPatDef(&pCfg->chemoScanCfg,pCoeffs,&patDefCh);
-        	if (ret_val == DLPSPEC_PASS)
-        		numPatterns = dlpspec_scan_chemo_genPatterns(&patDefCh,pFB,0);
+        	for(i = 0; i < pCfg->chemoScanCfg.num_seqs*pCfg->chemoScanCfg.repeat_count; i++)
+        	{
+        		ret_val = dlpspec_scan_chemo_genPatDef(&pCfg->chemoScanCfg,
+        				pCoeffs,&patDefCh,i%pCfg->chemoScanCfg.num_seqs);
+				if (ret_val == DLPSPEC_PASS)
+				{
+					numPatterns += dlpspec_scan_chemo_genSinglePatterns(&patDefCh,pFB,i);
+				}
+
+        	}
         	break;
 		default:
 			return ERR_DLPSPEC_INVALID_INPUT;

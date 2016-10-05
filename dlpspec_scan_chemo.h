@@ -23,8 +23,9 @@ typedef struct
 // Function prototypes
 DLPSPEC_ERR_CODE dlpspec_scan_chemo_interpret(const uScanData *pScanData,scanResults *pResults);
 DLPSPEC_ERR_CODE dlpspec_scan_chemo_genPatDef(const chemoScanConfig *pScanConfig,
-		const calibCoeffs *pCoeffs, patDefChemo *patDefCh);
-int32_t dlpspec_scan_chemo_genPatterns(const patDefChemo *patDefCh,
-		const FrameBufferDescriptor *pFB, uint32_t startPattern);
+		const calibCoeffs *pCoeffs, patDefChemo *patDefCh, uint32_t seqId);
+int32_t dlpspec_scan_chemo_genSinglePatterns(const patDefChemo *patDefCh,
+		const FrameBufferDescriptor *pFB, uint32_t seqId);
+chemoSelection dlpspec_get_wavelengths_heights(uint8_t seqId);
 
 #endif /* DLPSPEC_SCAN_CHEMO_H_ */

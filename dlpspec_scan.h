@@ -32,6 +32,8 @@
 /** Maximum number of sections allowed in a slew scan definition/config */
 #define SLEW_SCAN_MAX_SECTIONS 5
 
+#define CHEMO_SCAN_MAX_SEQS 24
+
 /** Supported scan types */
 typedef enum
 {
@@ -80,24 +82,26 @@ typedef struct
     SCAN_CONFIG_STUB
 }scanConfig;
 
-#define MAX_CHEMO_PATTERNS_PER_SCAN	228
+#define MAX_CHEMO_PATTERNS_PER_SCAN	150
 
 typedef struct
 {
 	SCAN_CONFIG_HEAD
 	uint8_t width_px;
-	uint16_t num_patterns;
+	uint16_t num_seqs;
 	uint16_t num_repeats;
-	uint16_t seqId;
+	uint16_t repeat_count;
+	uint8_t seq_id[CHEMO_SCAN_MAX_SEQS];
 }chemoScanConfig;
 
 typedef struct
 {
 	uint16_t wavelengths[MAX_CHEMO_PATTERNS_PER_SCAN];
 	uint16_t heights[MAX_CHEMO_PATTERNS_PER_SCAN];
+	uint16_t num_patterns;
 }chemoSelection;
 
-#define CHEMO_SCAN_CFG_FORMAT SCAN_CONFIG_HEAD_FORMAT "cvvv"
+#define CHEMO_SCAN_CFG_FORMAT SCAN_CONFIG_HEAD_FORMAT "cvvvc#"
 
 typedef enum
 {
